@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "BookRoll PDF Exporter",
+  "version": "1.0.0",
+  "description": "BookRollの教材スライドを全ページ取得してPDFとして書き出します。",
+  "permissions": ["activeTab", "scripting", "downloads"],
+  "host_permissions": [
+    "https://bookroll.let.media.kyoto-u.ac.jp/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "BookRoll PDF Exporter"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["jspdf.umd.min.js"],
+      "matches": ["https://bookroll.let.media.kyoto-u.ac.jp/*"]
+    }
+  ]
+}
