@@ -1,3 +1,7 @@
+# 警告
+
+この拡張機能を用いて作成したpdfを第三者に公開することは著作権法によって禁止されています。
+
 # BookRoll PDF Exporter
 
 Kyoto University の学習で利用されるスライド共有サービス BookRoll で公開されている教材スライドを、PDF として保存する Chrome 拡張機能です。

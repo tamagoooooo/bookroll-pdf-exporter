@@ -2,3 +2,7 @@ node_modules/
 .DS_Store
 bun.lockb
 *.tsbuildinfo
+
+# 配布パッケージの成果物
+dist/
+*.zip
