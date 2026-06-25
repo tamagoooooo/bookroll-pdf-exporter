@@ -1,0 +1,14 @@
+{
+  "name": "bookroll-pdf-exporter",
+  "version": "1.0.0",
+  "description": "BookRollの教材スライドを全ページ取得してPDFとして書き出します。",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.2.0",
+    "typescript": "latest"
+  }
+}
