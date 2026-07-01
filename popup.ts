@@ -11,6 +11,12 @@ interface ResultMessage {
   filename?: string;
 }
 
+interface TextResult {
+  error?: string;
+  text?: string;
+  pages?: number;
+}
+
 interface PageData {
   [key: number]: {
     data:string,
@@ -33,6 +39,7 @@ interface TextInfo {
 }
 
 const exportBtn = document.getElementById('export') as HTMLButtonElement;
+const exportTextBtn = document.getElementById('export-text') as HTMLButtonElement;
 const statusEl = document.getElementById('status') as HTMLDivElement;
 const bar = document.getElementById('bar') as HTMLProgressElement;
 
@@ -175,6 +182,87 @@ exportBtn.addEventListener('click', async () => {
   } finally {
     chrome.runtime.onMessage.removeListener(onMsg);
     exportBtn.disabled = false;
+  }
+});
+
+// MAIN world で実行し、Vuex ストアの ContentsModule.textAsString を読み取る。
+// textAsString は list[string]（index = ページ番号 - 1）で、各ページの本文が入っている。
+// __vue__ は MAIN world でしか見えないため、この関数は world: 'MAIN' で実行する必要がある。
+function extractTextAsString(): TextResult {
+  const appElement = document.querySelector("#app") as any;
+  if (!appElement || !appElement.__vue__) {
+    return { error: 'Vue インスタンスが見つかりません。' };
+  }
+  const store = appElement.__vue__.$root?.$store;
+  if (!store?.state?.ContentsModule) {
+    return { error: 'ContentsModuleが見つかりません。' };
+  }
+
+  const textAsString = store.state.ContentsModule.textAsString as unknown;
+  if (!Array.isArray(textAsString)) {
+    return { error: 'テキスト情報（textAsString）が見つかりません。' };
+  }
+
+  // ページ区切りを付けて全ページを1つの文字列に連結する（index + 1 = ページ番号）。
+  const text = textAsString
+    .map((t, i) => `===== ${i + 1} ページ =====\n${(t ?? '').toString()}`)
+    .join('\n\n');
+
+  return { text, pages: textAsString.length };
+}
+
+exportTextBtn.addEventListener('click', async () => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+  if (!tab.url || !tab.url.includes('bookroll.let.media.kyoto-u.ac.jp')) {
+    setStatus('BookRollのページで実行してください。');
+    return;
+  }
+
+  exportBtn.disabled = true;
+  exportTextBtn.disabled = true;
+  setStatus('テキスト情報を抽出中...');
+
+  try {
+    // __vue__ を参照するため MAIN world で実行する。
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id! },
+      world: 'MAIN',
+      func: extractTextAsString
+    });
+
+    const result = results[0]?.result as TextResult | undefined;
+    if (!result) {
+      setStatus('エラー: 結果を取得できませんでした。');
+      return;
+    }
+    if (result.error) {
+      setStatus('エラー: ' + result.error);
+      return;
+    }
+    if (result.text === undefined) {
+      setStatus('エラー: テキストの抽出に失敗しました。');
+      return;
+    }
+
+    let title = (tab.title || 'bookroll').replace(/[\\/:*?"<>|]/g, '_').trim();
+    if (!title) title = 'bookroll';
+    const filename = title + '.txt';
+
+    const dataUrl = 'data:text/plain;charset=utf-8,' + encodeURIComponent(result.text);
+    await chrome.downloads.download({
+      url: dataUrl,
+      filename,
+      saveAs: true
+    });
+
+    setStatus(`完了: ${result.pages}ページのテキストを書き出しました。`);
+  } catch (e) {
+    const errorMsg = e instanceof Error ? e.message : String(e);
+    setStatus('エラー: ' + errorMsg);
+  } finally {
+    exportBtn.disabled = false;
+    exportTextBtn.disabled = false;
   }
 });
 
